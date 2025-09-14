@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Betwos Lucky Wheel</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      background: linear-gradient(135deg, #ffffff, #c0f0ec);
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, teal, turquoise);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .input-box {
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .input-box input {
+      padding: 8px 12px;
+      border: 2px solid teal;
+      border-radius: 6px;
+    }
+    .input-box button {
+      padding: 8px 16px;
+      border: none;
+      background: teal;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .pointer {
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-top: 30px solid red;
+      margin-top: -5px;
+      z-index: 10;
+    }
+    .wheel-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 20px 0;
+    }
+    .wheel-wrap {
+      position: relative;
+      width: min(500px, 90vw);
+      height: min(500px, 90vw);
+      max-width: 500px;
+      max-height: 500px;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+    }
+    #result {
+      margin-top: 15px;
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+      min-height: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎰 Betwos Lucky Wheel</h1>
+  <div class="input-box">
+    <input id="userId" type="text" placeholder="User ID" />
+    <input id="specialCode" type="text" placeholder="Special Code" />
+    <button id="spinBtn">Spin Now</button>
+  </div>
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <div class="wheel-wrap">
+      <canvas id="wheel"></canvas>
+    </div>
+  </div>
+  <div id="result"></div>
+
+  <script>
+    const prizes = ["RM8,888","RM5,888","RM2,888","RM888","RM588","RM188","RM88","RM8","RM0"];
+    const probabilities = [0, 0.02, 0.08, 0.2, 0.7, 2, 7, 20, 70]; 
+    const sliceColors = ["#FF5722","#FFC107","#4CAF50","#03A9F4","#9C27B0","#E91E63","#00BCD4","#8BC34A","#FF9800"];
+
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    let rotation = 0;
+    let spinning = false;
+
+    function resizeCanvas() {
+      const container = canvas.parentElement;
+      const size = Math.min(container.offsetWidth, container.offsetHeight);
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset any previous scale
+      ctx.scale(dpr, dpr);
+      canvas.style.width = size + 'px';
+      canvas.style.height = size + 'px';
+      drawWheel();
+    }
+
+    function drawWheel() {
+      const size = canvas.width / (window.devicePixelRatio || 1);
+      const radius = size / 2;
+      const sliceAngle = (2 * Math.PI) / prizes.length;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const dpr = window.devicePixelRatio || 1;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.translate(radius, radius);
+      ctx.rotate(rotation);
+
+      for(let i = 0; i < prizes.length; i++) {
+        const start = i * sliceAngle;
+        const end = start + sliceAngle;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, start, end);
+        ctx.fillStyle = sliceColors[i % sliceColors.length];
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.save();
+        ctx.rotate(start + sliceAngle/2);
+        ctx.fillStyle = "white";
+        ctx.font = ${Math.floor(radius * 0.12)}px Arial;
+        ctx.textAlign = "right";
+        ctx.fillText(prizes[i], radius - 20, 0);
+        ctx.restore();
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+
+    function pickPrizeIndex() {
+      const rnd = Math.random() * 100;
+      let cum = 0;
+      for (let i = 0; i < probabilities.length; i++) {
+        cum += probabilities[i];
+        if (rnd <= cum) return i;
+      }
+      return prizes.length - 1;
+    }
+
+    function spin() {
+      if (spinning) return;
+      const userId = document.getElementById("userId").value;
+      const specialCode = document.getElementById("specialCode").value;
+      if (!userId || !specialCode) {
+        alert("Please enter both User ID and Special Code");
+        return;
+      }
+
+      spinning = true;
+      document.getElementById("result").textContent = "";
+      const index = pickPrizeIndex();
+      const sliceAngle = (2 * Math.PI) / prizes.length;
+      const target = (3 * Math.PI / 2) - (index * sliceAngle + sliceAngle / 2);
+      const spins = 5;
+      const finalRotation = rotation + spins * 2 * Math.PI + (target - (rotation % (2 * Math.PI)));
+      const duration = 4000;
+      const start = performance.now();
+      const startRotation = rotation;
+
+      function animate(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        rotation = startRotation + (finalRotation - startRotation) * ease;
+        drawWheel();
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          // Backend call after spin
+          fetch("http://localhost:3000/api/spin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId,
+              specialCode,
+              prize: prizes[index]
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              document.getElementById("result").textContent = 🎉 You won ${data.prize}!;
+            } else {
+              document.getElementById("result").textContent = ❌ ${data.error};
+            }
+            spinning = false;
+          })
+          .catch(err => {
+            console.error(err);
+            document.getElementById("result").textContent = "❌ Server error";
+            spinning = false;
+          });
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+    document.getElementById("spinBtn").addEventListener("click", spin);
+    window.addEventListener("load", () => { resizeCanvas(); });
+  </script>
+</body>
+</html>
